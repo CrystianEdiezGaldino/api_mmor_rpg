@@ -171,13 +171,15 @@ class CharacterController extends Controller
         try {
             $characters = Character::where('account_name', $accountName)->get();
             return response()->json([
-                'status' => 'success',
+                'success' => true,
+                'message' => 'Personagens encontrados',
                 'data' => $characters
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Erro ao listar personagens'
+                'success' => false,
+                'message' => 'Erro ao listar personagens',
+                'error' => $e->getMessage()
             ], 500);
         }
     }

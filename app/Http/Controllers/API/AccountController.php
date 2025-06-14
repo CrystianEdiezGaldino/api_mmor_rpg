@@ -4,9 +4,12 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\AuthToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AccountController extends Controller
 {
@@ -113,6 +116,14 @@ class AccountController extends Controller
         //
     }
 
+    public function checkEndpoint()
+    {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Endpoint de login está funcionando! Use POST para fazer login.'
+        ]);
+    }
+
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -143,16 +154,56 @@ class AccountController extends Controller
             // Atualiza o lastactive
             $account->update(['lastactive' => time()]);
 
+            // Revoga tokens antigos
+            AuthToken::where('account_name', $account->login)
+                    ->where('is_revoked', false)
+                    ->update(['is_revoked' => true]);
+
+            // Gera novo token
+            $token = Str::random(64);
+            $expiresAt = Carbon::now()->addDays(7); // Token válido por 7 dias
+
+            AuthToken::create([
+                'account_name' => $account->login,
+                'token' => $token,
+                'expires_at' => $expiresAt
+            ]);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Login realizado com sucesso',
-                'data' => $account
+                'data' => $account,
+                'token' => $token,
+                'expires_at' => $expiresAt->toIso8601String()
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Erro ao realizar login',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function logout(Request $request)
+    {
+        try {
+            $token = $request->bearerToken();
+            
+            if ($token) {
+                AuthToken::where('token', $token)
+                        ->update(['is_revoked' => true]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Logout realizado com sucesso'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erro ao realizar logout',
                 'error' => $e->getMessage()
             ], 500);
         }

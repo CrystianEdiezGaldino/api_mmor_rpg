@@ -122,4 +122,15 @@ class Character extends Model
         'death_penalty_level' => 'integer',
         'pc_point' => 'integer'
     ];
+
+    protected $nullable = [
+        'deletetime',
+        'cancraft',
+        'online',
+        'onlinetime',
+        'lastAccess',
+        'wantspeace',
+        'power_grade',
+        'pc_point'
+    ];
 }
